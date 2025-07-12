@@ -5,6 +5,9 @@ class FeedForwardNeuralNetwork:
         self.nn = None
         self.batch_size = 1
         self.layer_sizes = None
+        self.intermediate_activation = self._sigmoid
+        self.output_activation = self._softmax
+        self.add_bias = False
         self.build(3, [5, 5, 3], 2)
         self.train([[1,2,3],[4,5,6],[7,8,9]], None)
 
@@ -16,18 +19,45 @@ class FeedForwardNeuralNetwork:
         self.nn = []
         for i in range(1, len(self.layer_sizes), 1):
             # building the layers
-            self.nn.append([np.random.rand(self.layer_sizes[i-1]) for _ in range(self.layer_sizes[i])])
+            self.nn.append([np.random.rand(self.layer_sizes[i-1] + (1 if self.add_bias else 0) ) for _ in range(self.layer_sizes[i])])
         return
     
 
     def train(self, X, Y):
         training_counter = 0
-        batch = [X[training_counter:training_counter + self.batch_size]]
-        b_delta = np.zeros_like(self.nn)
+        batch = X[training_counter:training_counter + self.batch_size]
+        # batch_Y = Y[training_counter:training_counter + self.batch_size]
+        b_delta = np.array(self.nn, dtype=object)
         # forward pass
-        self.current_res = np.array([np.zeros(i) for i in self.layer_sizes[1:]])
+        self.current_res = np.array([np.zeros(i) for i in self.layer_sizes[1:]], dtype=object)
         for value in batch:
-            pass # continue forward pass
+            self._forward_pass(value)
+            # self._calc_cost()
+            # self._back_propagate(do_update=False)
+        # self._update_weights(b_delta)
 
     def _forward_pass(self, features):
-        #TODO self explanitory...
+        #due to the educational and exploratory nature of this project it is an option to have or not have a bias value
+        if self.add_bias:
+            self.current_res[0] = self.intermediate_activation(np.sum(np.multiply(self.nn[0], np.insert(features, 0, 1)), axis=1))
+            for i in range(1, len(self.nn) - 1, 1):
+                self.current_res[i] = self.intermediate_activation(np.sum(np.multiply(self.nn[i], np.insert(self.current_res[i-1], 0, 1)), axis=1))
+            self.current_res[-1] = self.output_activation(np.sum(np.multiply(self.nn[-1], np.insert(self.current_res[-2], 0, 1)), axis=1))
+        else:
+            self.current_res[0] = self.intermediate_activation(np.sum(np.multiply(self.nn[0], features), axis=1))
+            for i in range(1, len(self.nn) - 1, 1):
+                self.current_res[i] = self.intermediate_activation(np.sum(np.multiply(self.nn[i], self.current_res[i-1]), axis=1))
+            self.current_res[-1] = self.output_activation(np.sum(np.multiply(self.nn[-1], self.current_res[-2]), axis=1))
+
+    def _sigmoid(self, inp):
+        return 1 / (1 + np.exp(-inp))
+    
+    def _relu(self, inp):
+        return max(inp.max(), 0)
+    
+    def _leaky_relu(self, inp):
+        const = 0.01
+        return max(inp.max(), (const * inp).max())
+    
+    def _softmax(self, inp):
+        return np.exp(inp) / np.sum(np.exp(inp), axis=0)
