@@ -3,6 +3,7 @@ class FeedForwardNeuralNetwork:
     def __init__(self):
         self.input_features = None
         self.nn = None
+        self._ref_nn_zeros = None
         self.batch_size = 1
         self.layer_sizes = None
         self.intermediate_activation = self._sigmoid
@@ -18,9 +19,11 @@ class FeedForwardNeuralNetwork:
         self.layer_sizes.insert(0, inp_size)
         self.layer_sizes.append(output_size)
         self.nn = []
+        self._ref_nn_zeros = []
         for i in range(1, len(self.layer_sizes), 1):
             # building the layers
             self.nn.append([np.random.rand(self.layer_sizes[i-1] + (1 if self.add_bias else 0) ) for _ in range(self.layer_sizes[i])])
+            self._ref_nn_zeros.append([np.zeros(self.layer_sizes[i-1] + (1 if self.add_bias else 0) ) for _ in range(self.layer_sizes[i])])
         return
     
 
@@ -29,14 +32,16 @@ class FeedForwardNeuralNetwork:
         while training_counter < len(X):
             batch = X[training_counter:training_counter + self.batch_size]
             batch_Y = Y[training_counter:training_counter + self.batch_size]
-            b_delta = np.array(self.nn, dtype=object)
+            b_delta = self._ref_nn_zeros.copy()
             # forward pass
             self.current_res = np.array([np.zeros(i) for i in self.layer_sizes[1:]], dtype=object)
             costs_value = 0
             for vx, vy in zip(batch, batch_Y):
                 self._forward_pass(vx)
-                costs_value = self.cost_func(vy)
-                # self._back_propagate(update_weights=False)
+                Y = np.zeros(len(self.nn[-1]))
+                Y[vy] = 1
+                costs_value = self.cost_func(Y)
+                self._back_propagate(Y)
             # self._update_weights(b_delta)
             training_counter = training_counter + self.batch_size
             
@@ -67,13 +72,22 @@ class FeedForwardNeuralNetwork:
     def _softmax(self, inp):
         return np.exp(inp) / np.sum(np.exp(inp), axis=0)
     
-    def _classification_cost(self, y):
-        Y = np.zeros(len(self.nn[-1]))
-        Y[y] = 1
+    def _classification_cost(self, Y):
+        # one hot encode y value to align with classification 
+
         cost = np.sum(Y * np.log(self.current_res[-1]) + (1 - Y) * np.log(1 - self.current_res[-1]))
         return cost
 
 
-
     def _regression_cost(self):
         pass
+
+    def _back_propagate(self, Y):
+        l_delta = np.array(self.nn, dtype=object)
+        l_delta[-1] = self.current_res[-1] - Y
+        for ri in range(len(self.nn) - 1, 0, -1):
+            # TODO : rewatch / continue watching the course there are holes in knowledge as 
+            # to how to compute the gradients and how to apply the result of the partial derivatives(b_delta) to each weights in each node of a layer 
+            pass 
+
+
