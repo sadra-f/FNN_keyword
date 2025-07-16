@@ -10,6 +10,8 @@ class FeedForwardNeuralNetwork:
         self.output_activation = self._softmax
         self.cost_func = self._classification_cost
         self.add_bias = False
+        self.learning_rate = 0.01
+        self.cost_history = []
         self.build(3, [5, 5, 3], 2)
         self.train([[1,2,3],[4,5,6],[7,8,9]], [0, 1, 1])
 
@@ -19,11 +21,9 @@ class FeedForwardNeuralNetwork:
         self.layer_sizes.insert(0, inp_size)
         self.layer_sizes.append(output_size)
         self.nn = []
-        self._ref_nn_zeros = []
         for i in range(1, len(self.layer_sizes), 1):
             # building the layers
-            self.nn.append([np.random.rand(self.layer_sizes[i-1] + (1 if self.add_bias else 0) ) for _ in range(self.layer_sizes[i])])
-            self._ref_nn_zeros.append([np.zeros(self.layer_sizes[i-1] + (1 if self.add_bias else 0) ) for _ in range(self.layer_sizes[i])])
+            self.nn.append(np.array([np.random.rand(self.layer_sizes[i-1] + (1 if self.add_bias else 0)) for _ in range(self.layer_sizes[i])]))
         return
     
 
@@ -32,16 +32,17 @@ class FeedForwardNeuralNetwork:
         while training_counter < len(X):
             batch = X[training_counter:training_counter + self.batch_size]
             batch_Y = Y[training_counter:training_counter + self.batch_size]
-            b_delta = self._ref_nn_zeros.copy()
-            # forward pass
             self.current_res = np.array([np.zeros(i) for i in self.layer_sizes[1:]], dtype=object)
-            costs_value = 0
+            b_delta = self.current_res.copy()
+            # forward pass
             for vx, vy in zip(batch, batch_Y):
                 self._forward_pass(vx)
                 Y = np.zeros(len(self.nn[-1]))
                 Y[vy] = 1
-                costs_value = self.cost_func(Y)
-                self._back_propagate(Y)
+                self.cost_history.append(self.cost_func(Y))
+                l_delta = self._back_propagate(Y)
+                b_delta += l_delta # passed error claculation got stuck here FFS... andrew and his broken annotations and incompelete explainations..
+                pass
             # self._update_weights(b_delta)
             training_counter = training_counter + self.batch_size
             
@@ -83,11 +84,14 @@ class FeedForwardNeuralNetwork:
         pass
 
     def _back_propagate(self, Y):
-        l_delta = np.array(self.nn, dtype=object)
+        l_delta = self.current_res.copy()
         l_delta[-1] = self.current_res[-1] - Y
-        for ri in range(len(self.nn) - 1, 0, -1):
+        # nn length is subtracted by 2, 1 for len giving the len and no the last index and 1 for
+        # the last layer being output layer the value for which is calculated before the loop
+        for ri in range(len(self.nn) - 2, 0, -1):
             # TODO : rewatch / continue watching the course there are holes in knowledge as 
             # to how to compute the gradients and how to apply the result of the partial derivatives(b_delta) to each weights in each node of a layer 
-            pass 
+            l_delta[ri] = np.matmul(self.nn[ri+1].T, l_delta[ri+1]) * (self.current_res[ri] ** 2)
+            # the problem was that the vectors mismatched in size when using the andrew ng explaination somehow its apparently different as implemented above and not this as he said in his vid: np.matmul(self.nn[ri].T, l_delta[ri+1])...
 
-
+        return l_delta
