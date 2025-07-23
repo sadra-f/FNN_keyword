@@ -41,9 +41,9 @@ class FeedForwardNeuralNetwork:
                 Y[vy] = 1
                 self.cost_history.append(self.cost_func(Y))
                 l_delta = self._back_propagate(Y)
-                b_delta += l_delta # passed error claculation got stuck here FFS... andrew and his broken annotations and incompelete explainations..
+                b_delta += l_delta
                 pass
-            # self._update_weights(b_delta)
+            self._update_weights(b_delta)
             training_counter = training_counter + self.batch_size
             
 
@@ -93,5 +93,11 @@ class FeedForwardNeuralNetwork:
             # to how to compute the gradients and how to apply the result of the partial derivatives(b_delta) to each weights in each node of a layer 
             l_delta[ri] = np.matmul(self.nn[ri+1].T, l_delta[ri+1]) * (self.current_res[ri] ** 2)
             # the problem was that the vectors mismatched in size when using the andrew ng explaination somehow its apparently different as implemented above and not this as he said in his vid: np.matmul(self.nn[ri].T, l_delta[ri+1])...
-
+            l_delta[ri+1] = l_delta[ri] * self.current_res[ri]
         return l_delta
+    
+    def _update_weights(self, deltas):
+        #TODO : add regularization 
+        for v in deltas:
+            tmp = v / self.batch_size
+            self.nn = self.nn + self.learning_rate * tmp
