@@ -41,6 +41,14 @@ class FeedForwardNeuralNetwork:
                 Y[vy] = 1
                 self.cost_history.append(self.cost_func(Y))
                 l_delta = self._back_propagate(Y)
+                # TODO : fix this
+                # for v1, v2 in zip(b_delta,l_delta):
+                #     print(v1.shape, v2.shape)
+                # ... V
+                # (5,) (5,)
+                # (5,) (5,)
+                # (3,) (5,)
+                # (2,) (3,)
                 b_delta += l_delta
                 pass
             self._update_weights(b_delta)
@@ -89,7 +97,7 @@ class FeedForwardNeuralNetwork:
         # nn length is subtracted by 2, 1 for len giving the len and no the last index and 1 for
         # the last layer being output layer the value for which is calculated before the loop
         for ri in range(len(self.nn) - 2, 0, -1):
-            # TODO : rewatch / continue watching the course there are holes in knowledge as 
+            # TODO(DONE) : rewatch / continue watching the course there are holes in knowledge as 
             # to how to compute the gradients and how to apply the result of the partial derivatives(b_delta) to each weights in each node of a layer 
             l_delta[ri] = np.matmul(self.nn[ri+1].T, l_delta[ri+1]) * (self.current_res[ri] ** 2)
             # the problem was that the vectors mismatched in size when using the andrew ng explaination somehow its apparently different as implemented above and not this as he said in his vid: np.matmul(self.nn[ri].T, l_delta[ri+1])...
@@ -98,6 +106,7 @@ class FeedForwardNeuralNetwork:
     
     def _update_weights(self, deltas):
         #TODO : add regularization 
-        for v in deltas:
+        for i, v in enumerate(deltas):
             tmp = v / self.batch_size
-            self.nn = self.nn + self.learning_rate * tmp
+            self.nn = self.nn + (self.learning_rate * tmp)
+            pass
