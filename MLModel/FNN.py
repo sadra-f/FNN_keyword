@@ -58,15 +58,15 @@ class FeedForwardNeuralNetwork:
     def _forward_pass(self, features):
         # Due to the educational and exploratory nature of this project it is an option to include the bias value
         if self.add_bias:
-            self.current_res[0] = self.intermediate_activation(np.sum(np.multiply(self.nn[0], np.insert(features, 0, 1)), axis=1))
+            self.current_res[0] = self.intermediate_activation(np.dot(self.nn[0], np.insert(features, 0, 1)))
             for i in range(1, len(self.nn) - 1, 1):
-                self.current_res[i] = self.intermediate_activation(np.sum(np.multiply(self.nn[i], np.insert(self.current_res[i-1], 0, 1)), axis=1))
-            self.current_res[-1] = self.output_activation(np.sum(np.multiply(self.nn[-1], np.insert(self.current_res[-2], 0, 1)), axis=1))
+                self.current_res[i] = self.intermediate_activation(np.dot(self.nn[i], np.insert(self.current_res[i-1], 0, 1)))
+            self.current_res[-1] = self.output_activation(np.dot(self.nn[-1], np.insert(self.current_res[-2], 0, 1)))
         else:
-            self.current_res[0] = self.intermediate_activation(np.sum(np.multiply(self.nn[0], features), axis=1))
+            self.current_res[0] = self.intermediate_activation(np.dot(self.nn[0], features))
             for i in range(1, len(self.nn) - 1, 1):
-                self.current_res[i] = self.intermediate_activation(np.sum(np.multiply(self.nn[i], self.current_res[i-1]), axis=1))
-            self.current_res[-1] = self.output_activation(np.sum(np.multiply(self.nn[-1], self.current_res[-2]), axis=1))
+                self.current_res[i] = self.intermediate_activation(np.dot(self.nn[i], self.current_res[i-1]))
+            self.current_res[-1] = self.output_activation(np.dot(self.nn[-1], self.current_res[-2]))
 
     def _sigmoid(self, inp):
         return 1 / (1 + np.exp(-inp))
