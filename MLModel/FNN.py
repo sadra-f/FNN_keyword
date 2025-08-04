@@ -84,7 +84,7 @@ class FeedForwardNeuralNetwork:
     def _classification_cost(self, Y):
         # one hot encode y value to align with classification 
 
-        cost = np.sum(Y * np.log(self.current_res[-1]) + (1 - Y) * np.log(1 - self.current_res[-1]))
+        cost = -np.sum(Y * np.log(self.current_res[-1] + 1e-9))
         return cost
 
 
@@ -93,10 +93,11 @@ class FeedForwardNeuralNetwork:
 
     def _back_propagate(self, Y):
         l_delta = self.current_res.copy()
+        #TODO(DONE) : shouldnt this V be the log of the difference ? like as in the error of the classification. answer : apparently not...
         l_delta[-1] = self.current_res[-1] - Y
         # nn length is subtracted by 2, 1 for len giving the len and no the last index and 1 for
         # the last layer being output layer the value for which is calculated before the loop
-        for ri in range(len(self.nn) - 2, 0, -1):
+        for ri in range(len(self.nn) - 2, -1, -1):
             # TODO(DONE) : rewatch / continue watching the course there are holes in knowledge as 
             # to how to compute the gradients and how to apply the result of the partial derivatives(b_delta) to each weights in each node of a layer 
             l_delta[ri] = np.matmul(self.nn[ri+1].T, l_delta[ri+1]) * (self.current_res[ri] ** 2)
