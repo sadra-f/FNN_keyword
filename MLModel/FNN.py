@@ -41,16 +41,7 @@ class FeedForwardNeuralNetwork:
                 Y[vy] = 1
                 self.cost_history.append(self.cost_func(Y))
                 l_delta = self._back_propagate(Y)
-                # TODO : fix this
-                # for v1, v2 in zip(b_delta,l_delta):
-                #     print(v1.shape, v2.shape)
-                # ... V
-                # (5,) (5,)
-                # (5,) (5,)
-                # (3,) (5,)
-                # (2,) (3,)
                 b_delta += l_delta
-                pass
             self._update_weights(b_delta)
             training_counter = training_counter + self.batch_size
             
@@ -101,14 +92,15 @@ class FeedForwardNeuralNetwork:
         for ri in range(len(self.nn) - 2, -1, -1):
             # TODO(DONE) : rewatch / continue watching the course there are holes in knowledge as 
             # to how to compute the gradients and how to apply the result of the partial derivatives(b_delta) to each weights in each node of a layer 
-            l_delta[ri] = np.matmul(self.nn[ri+1].T, l_delta[ri+1]) * (self.current_res[ri] ** 2)
+            l_delta[ri] = np.matmul(self.nn[ri+1].T, l_delta[ri+1]) * (self.current_res[ri] * (1 - self.current_res[ri]))
             # the problem was that the vectors mismatched in size when using the andrew ng explaination somehow its apparently different as implemented above and not this as he said in his vid: np.matmul(self.nn[ri].T, l_delta[ri+1])...
-            l_delta[ri+1] = l_delta[ri] * self.current_res[ri]
+            l_delta[ri] = l_delta[ri] * self.current_res[ri]
         return l_delta
     
     def _update_weights(self, deltas):
         #TODO : add regularization 
         for i, v in enumerate(deltas):
             tmp = v / self.batch_size
-            self.nn = self.nn + (self.learning_rate * tmp)
-            pass
+            self.nn[i] = self.nn[i] + tmp.reshape(-1,1)
+            
+        return
