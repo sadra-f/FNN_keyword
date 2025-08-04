@@ -79,7 +79,8 @@ class FeedForwardNeuralNetwork:
         return np.maximum(inp, (const * inp))
     
     def _softmax(self, inp):
-        return np.exp(inp) / np.sum(np.exp(inp), axis=0)
+        tmp = np.exp(inp - np.max(inp))
+        return tmp / np.sum(tmp)
     
     def _classification_cost(self, Y):
         # one hot encode y value to align with classification 
