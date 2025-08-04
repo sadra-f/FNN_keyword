@@ -72,11 +72,11 @@ class FeedForwardNeuralNetwork:
         return 1 / (1 + np.exp(-inp))
     
     def _relu(self, inp):
-        return max(inp.max(), 0)
+        return np.maximum(inp, 0)
     
     def _leaky_relu(self, inp):
         const = 0.01
-        return max(inp.max(), (const * inp).max())
+        return np.maximum(inp, (const * inp))
     
     def _softmax(self, inp):
         return np.exp(inp) / np.sum(np.exp(inp), axis=0)
