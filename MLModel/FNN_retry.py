@@ -14,6 +14,8 @@ class FeedForwardNeuralNetwork:
         # self.batch_size = 100
 
     def build(self, inp, hidden:list[list], outp):
+        if outp < 2:
+            raise ValueError("The NN is designed as to process binary classification as 2 class classification so outp must be >=2")
         self.layout = [inp] + hidden + [outp]
         self.structure = [[f"I{i}" for i in range(self.layout[0])]]
         self._weight_template = []
@@ -39,11 +41,36 @@ class FeedForwardNeuralNetwork:
             self.a.append([None for _ in range(iv)])
         for v in X:
             self._forward(v)
+            pass # TODO : add softmax, loss calc and backprop
 
     def _forward(self, x):
         _x = np.insert(x, 0, 1)
-        for i, iv in enumerate(self.layout[1:]):
-            # self.z[]
-            pass
+        for j in range(self.layout[1]):
+            self.z[0][j] = np.sum(self.weights[0] * _x)
+            self.a[0][j] = self._leaky_relu(self.z[0][j])
+        # self.z[0] = np.insert(x, 0, 1)
+        for i in range(1, len(self.z), 1):
+            for j in range(len(self.z[i])):
+                self.z[i][j] = np.sum(self.weights[i][j] * np.insert(self.z[i-1], 0, 1))
+                # self.z[i][j] = np.sum(self.weights[i-1][j] * self.z[i-1])
+                self.a[i][j] = self._leaky_relu(self.z[i][j])
+        return
 
-        
+    def soft_max(x):
+        exp_x = np.exp(x - np.max(x))
+        return exp_x / np.sum(exp_x)
+
+    def _loss(self, Y):
+        # the label data is expected as one hot encoded values and even for binary calssification the
+        # value should look like [0,1] and not 1
+        # and for 4 classes it would be like e.g [0,0,1,0]
+        return -(1/len(Y)) * np.sum(Y * np.log(self.a[-1]))
+    
+    def _onehot_encode(self, y):
+        tmp = [-1 for i in range(self.layout[-1])]
+        tmp[y] = 1
+        return tmp
+    
+    def _leaky_relu(self, inp):
+        const = 0.01
+        return np.maximum(inp, (const * inp))
