@@ -9,10 +9,11 @@ class FeedForwardNeuralNetwork:
     """
     def __init__(self):
         self.structure = None
-        self.z = []
-        self.a = []
-        self.err = []
-        self.grad = []
+        self.z = None
+        self.a = None
+        self.err = None
+        self.grdnt = None
+        self.loss_hist = None
         # self.batch_size = 100
 
     def build(self, inp, hidden:list[list], outp):
@@ -38,22 +39,29 @@ class FeedForwardNeuralNetwork:
         self.weights = self._weight_template.copy()
         self.z = []
         self.a = []
+        self.err = []
+        self.grdnt = []
+        self.loss_hist = []
         for _, iv in enumerate(self.layout[1:]):
             self.z.append([None for _ in range(iv)])
             self.a.append([None for _ in range(iv)])
-        for v in X:
-            self._forward(v)
-            pass # TODO : add softmax, loss calc and backprop
+        for i, x in enumerate(X):
+            self._forward(x)
+            self.loss_hist.append(self.cross_entropy(Y[i], self.a[-1]))
+            pass # add backprop
 
     def _forward(self, x):
         _x = np.insert(x, 0, 1)
+        #for the first layer (separated to simplify implemntation)
         for j in range(self.layout[1]):
             self.z[0][j] = np.sum(self.weights[0] * _x)
             self.a[0][j] = self._leaky_relu(self.z[0][j])
+        # for the second to L-1 layer
         for i in range(1, len(self.z)-1, 1):
             for j in range(len(self.z[i])):
                 self.z[i][j] = np.sum(self.weights[i][j] * np.insert(self.z[i-1], 0, 1))
                 self.a[i][j] = self._leaky_relu(self.z[i][j])
+        # for the last layer
         for j in range(len(self.z[-1])):
             self.z[-1][j] = np.sum(self.weights[-1][j] * np.insert(self.z[-2], 0, 1))
             self.a[-1][j] = self.soft_max(self.z[-1][j])
@@ -63,7 +71,7 @@ class FeedForwardNeuralNetwork:
         exp_x = np.exp(x - np.max(x))
         return exp_x / np.sum(exp_x)
 
-    def cross_entropy(y, p):
+    def cross_entropy(self, y, p):
         return -np.sum(y * np.log(p))
 
 
