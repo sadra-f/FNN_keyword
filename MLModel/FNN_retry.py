@@ -11,6 +11,8 @@ class FeedForwardNeuralNetwork:
         self.structure = None
         self.z = []
         self.a = []
+        self.err = []
+        self.grad = []
         # self.batch_size = 100
 
     def build(self, inp, hidden:list[list], outp):
@@ -48,17 +50,22 @@ class FeedForwardNeuralNetwork:
         for j in range(self.layout[1]):
             self.z[0][j] = np.sum(self.weights[0] * _x)
             self.a[0][j] = self._leaky_relu(self.z[0][j])
-        # self.z[0] = np.insert(x, 0, 1)
-        for i in range(1, len(self.z), 1):
+        for i in range(1, len(self.z)-1, 1):
             for j in range(len(self.z[i])):
                 self.z[i][j] = np.sum(self.weights[i][j] * np.insert(self.z[i-1], 0, 1))
-                # self.z[i][j] = np.sum(self.weights[i-1][j] * self.z[i-1])
                 self.a[i][j] = self._leaky_relu(self.z[i][j])
+        for j in range(len(self.z[-1])):
+            self.z[-1][j] = np.sum(self.weights[-1][j] * np.insert(self.z[-2], 0, 1))
+            self.a[-1][j] = self.soft_max(self.z[-1][j])
         return
 
     def soft_max(x):
         exp_x = np.exp(x - np.max(x))
         return exp_x / np.sum(exp_x)
+
+    def cross_entropy(y, p):
+        return -np.sum(y * np.log(p))
+
 
     def _loss(self, Y):
         # the label data is expected as one hot encoded values and even for binary calssification the
