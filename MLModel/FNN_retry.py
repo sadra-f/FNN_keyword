@@ -14,6 +14,7 @@ class FeedForwardNeuralNetwork:
         self.err = None
         self.grdnt = None
         self.loss_hist = None
+        self.relu_const = 0.01
         # self.batch_size = 100
 
     def build(self, inp, hidden:list[list], outp):
@@ -45,10 +46,15 @@ class FeedForwardNeuralNetwork:
         for _, iv in enumerate(self.layout[1:]):
             self.z.append([None for _ in range(iv)])
             self.a.append([None for _ in range(iv)])
+            self.err.append([None for _ in range(iv)])
+            self.grdnt = self._weight_template.copy()
         for i, x in enumerate(X):
+            y = self._onehot_encode(Y[i])
             self._forward(x)
-            self.loss_hist.append(self.cross_entropy(Y[i], self.a[-1]))
-            pass # add backprop
+            self.loss_hist.append(self.cross_entropy(y, self.a[-1]))
+            self._err(y)
+            self._grads(x)
+            pass # TODO: update weights
 
     def _forward(self, x):
         _x = np.insert(x, 0, 1)
@@ -60,19 +66,34 @@ class FeedForwardNeuralNetwork:
         for i in range(1, len(self.z)-1, 1):
             for j in range(len(self.z[i])):
                 self.z[i][j] = np.sum(self.weights[i][j] * np.insert(self.z[i-1], 0, 1))
-                self.a[i][j] = self._leaky_relu(self.z[i][j])
+            self.a[i] = self._leaky_relu(self.z[i])
         # for the last layer
         for j in range(len(self.z[-1])):
             self.z[-1][j] = np.sum(self.weights[-1][j] * np.insert(self.z[-2], 0, 1))
-            self.a[-1][j] = self.soft_max(self.z[-1][j])
+        self.a[-1] = self.soft_max(self.z[-1])
         return
 
-    def soft_max(x):
+    def soft_max(self, x):
         exp_x = np.exp(x - np.max(x))
         return exp_x / np.sum(exp_x)
 
     def cross_entropy(self, y, p):
         return -np.sum(y * np.log(p))
+
+    def _err(self, y):
+        self.err[-1] = self.a[-1] - y
+        for i in range(len(self.weights)-2, -1, -1):
+            _deriv = np.array(self.z[i])
+            _deriv[_deriv > 0] = 1
+            _deriv[_deriv <= 0] = 0
+            self.err[i] = np.matmul(np.array(self.weights[i+1])[:, 1:].T, self.err[i+1]) * _deriv
+        return
+
+    def _grads(self, inp):
+        self.grdnt[0] = np.outer(self.err[0], np.array(inp).T)
+        for i in range(1, len(self.weights), 1):
+            self.grdnt[i] = np.outer(self.err[i], np.array(self.a[i-1]).T)
+        return
 
 
     def _loss(self, Y):
@@ -82,10 +103,9 @@ class FeedForwardNeuralNetwork:
         return -(1/len(Y)) * np.sum(Y * np.log(self.a[-1]))
     
     def _onehot_encode(self, y):
-        tmp = [-1 for i in range(self.layout[-1])]
+        tmp = [0 for i in range(self.layout[-1])]
         tmp[y] = 1
         return tmp
     
     def _leaky_relu(self, inp):
-        const = 0.01
-        return np.maximum(inp, (const * inp))
+        return np.maximum(inp, (self.relu_const * np.array(inp)))
