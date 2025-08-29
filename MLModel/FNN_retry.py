@@ -31,6 +31,7 @@ class FeedForwardNeuralNetwork:
                 # +1 in range for the bias
                 tmp.append([f"L{i}-N{j}-W{w}" for w in range(self.layout[i-1] + 1)])
                 tmp_w.append(np.random.rand(self.layout[i-1] + 1))
+                #     weights = np.random.normal(loc=0.0, scale=std_dev, size=(n_inputs, n_outputs))
             self.structure.append(tmp)
             self._weight_template.append(tmp_w)
         # +1 in range for the bias
@@ -62,16 +63,16 @@ class FeedForwardNeuralNetwork:
         _x = np.insert(x, 0, 1)
         #for the first layer (separated to simplify implemntation)
         for j in range(self.layout[1]):
-            self.z[0][j] = np.sum(self.weights[0] * _x)
+            self.z[0][j] = np.sum(self.weights[0][j] * _x)
             self.a[0][j] = self._leaky_relu(self.z[0][j])
         # for the second to L-1 layer
         for i in range(1, len(self.z)-1, 1):
             for j in range(len(self.z[i])):
-                self.z[i][j] = np.sum(self.weights[i][j] * np.insert(self.z[i-1], 0, 1))
+                self.z[i][j] = np.sum(self.weights[i][j] * np.insert(self.a[i-1], 0, 1))
             self.a[i] = self._leaky_relu(self.z[i])
         # for the last layer
         for j in range(len(self.z[-1])):
-            self.z[-1][j] = np.sum(self.weights[-1][j] * np.insert(self.z[-2], 0, 1))
+            self.z[-1][j] = np.sum(self.weights[-1][j] * np.insert(self.a[-2], 0, 1))
         self.a[-1] = self.soft_max(self.z[-1])
         return
 
@@ -84,10 +85,10 @@ class FeedForwardNeuralNetwork:
             tmp_a[0][j] = self._leaky_relu(tmp_z[0][j])
         for i in range(1, len(tmp_z)-1, 1):
             for j in range(len(tmp_z[i])):
-                tmp_z[i][j] = np.sum(self.weights[i][j] * np.insert(tmp_z[i-1], 0, 1))
+                tmp_z[i][j] = np.sum(self.weights[i][j] * np.insert(tmp_a[i-1], 0, 1))
             tmp_a[i] = self._leaky_relu(tmp_z[i])
         for j in range(len(tmp_z[-1])):
-            tmp_z[-1][j] = np.sum(self.weights[-1][j] * np.insert(tmp_z[-2], 0, 1))
+            tmp_z[-1][j] = np.sum(self.weights[-1][j] * np.insert(tmp_a[-2], 0, 1))
         tmp_a[-1] = self.soft_max(tmp_z[-1])
         if logits:
             return (np.array(tmp_a[-1]).argmax(), tmp_a)
@@ -106,7 +107,7 @@ class FeedForwardNeuralNetwork:
         for i in range(len(self.weights)-2, -1, -1):
             _deriv = np.array(self.z[i])
             _deriv[_deriv > 0] = 1
-            _deriv[_deriv <= 0] = 0
+            _deriv[_deriv <= 0] = self.RELU_CONST
             self._errors[i] = np.matmul(np.array(self.weights[i+1])[:, 1:].T, self._errors[i+1]) * _deriv
         return
 
