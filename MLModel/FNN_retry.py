@@ -1,5 +1,5 @@
 import numpy as np
-
+import copy
 
 
 
@@ -15,7 +15,7 @@ class FeedForwardNeuralNetwork:
         self.gradients = None
         self.loss_hist = None
         self.RELU_CONST = 0.01
-        self.LEARNING_RATE = 0.005
+        self.LEARNING_RATE = 0.001
         # self.batch_size = 100
 
     def build(self, inp, hidden:list[list], outp):
@@ -30,7 +30,7 @@ class FeedForwardNeuralNetwork:
             for j in range(self.layout[i]):
                 # +1 in range for the bias
                 tmp.append([f"L{i}-N{j}-W{w}" for w in range(self.layout[i-1] + 1)])
-                std_dev = np.sqrt(2.0 / self.layout[i-1] + 1)
+                std_dev = np.sqrt(2.0 / (self.layout[i-1] + 1))
                 tmp_w.append(np.random.normal(loc=0.0, scale=std_dev, size=self.layout[i-1]+1))
             self.structure.append(tmp)
             self._weight_template.append(tmp_w)
@@ -39,7 +39,7 @@ class FeedForwardNeuralNetwork:
         self._weight_template.append([np.random.rand(self.layout[-2] + 1) for j in range(self.layout[-1])])
 
     def train(self, X, Y):
-        self.weights = self._weight_template.copy()
+        self.weights = copy.deepcopy(self._weight_template)
         self.z = []
         self.a = []
         self._errors = []
@@ -49,9 +49,10 @@ class FeedForwardNeuralNetwork:
             self.z.append([None for _ in range(iv)])
             self.a.append([None for _ in range(iv)])
             self._errors.append([None for _ in range(iv)])
-            self.gradients = self._weight_template.copy()
-        for i, x in enumerate(X):
+            self.gradients = copy.deepcopy(self._weight_template)
+        for i, _x in enumerate(X):
             y = self._onehot_encode(Y[i])
+            x = self._normalize(_x)
             self._forward(x)
             self.loss_hist.append(self.cross_entropy(y, self.a[-1]))
             self._err(y)
@@ -76,11 +77,11 @@ class FeedForwardNeuralNetwork:
         return
 
     def predict(self, x, logits=False):
-        _x = np.insert(x, 0, 1)
-        tmp_z = self.z.copy()
-        tmp_a = self.a.copy()
+        _x = self._normalize(np.insert(x, 0, 1))
+        tmp_z = copy.deepcopy(self.z)
+        tmp_a = copy.deepcopy(self.a)
         for j in range(self.layout[1]):
-            tmp_z[0][j] = np.sum(self.weights[0] * _x)
+            tmp_z[0][j] = np.sum(self.weights[0][j] * _x)
             tmp_a[0][j] = self._leaky_relu(tmp_z[0][j])
         for i in range(1, len(tmp_z)-1, 1):
             for j in range(len(tmp_z[i])):
@@ -138,3 +139,9 @@ class FeedForwardNeuralNetwork:
     
     def _leaky_relu(self, inp):
         return np.maximum(inp, (self.RELU_CONST * np.array(inp)))
+    
+    def _normalize(self, vec):
+        norm = np.linalg.norm(vec)
+        if norm == 0:
+            return vec  # Return original if zero vector
+        return vec / norm
