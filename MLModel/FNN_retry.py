@@ -11,10 +11,11 @@ class FeedForwardNeuralNetwork:
         self.structure = None
         self.z = None
         self.a = None
-        self.err = None
-        self.grdnt = None
+        self._errors = None
+        self.gradients = None
         self.loss_hist = None
-        self.relu_const = 0.01
+        self.RELU_CONST = 0.01
+        self.LEARNING_RATE = 0.005
         # self.batch_size = 100
 
     def build(self, inp, hidden:list[list], outp):
@@ -40,20 +41,21 @@ class FeedForwardNeuralNetwork:
         self.weights = self._weight_template.copy()
         self.z = []
         self.a = []
-        self.err = []
-        self.grdnt = []
+        self._errors = []
+        self.gradients = []
         self.loss_hist = []
         for _, iv in enumerate(self.layout[1:]):
             self.z.append([None for _ in range(iv)])
             self.a.append([None for _ in range(iv)])
-            self.err.append([None for _ in range(iv)])
-            self.grdnt = self._weight_template.copy()
+            self._errors.append([None for _ in range(iv)])
+            self.gradients = self._weight_template.copy()
         for i, x in enumerate(X):
             y = self._onehot_encode(Y[i])
             self._forward(x)
             self.loss_hist.append(self.cross_entropy(y, self.a[-1]))
             self._err(y)
-            self._grads(x)
+            self._clac_gradient(x)
+            self._update_weights()
             pass # TODO: update weights
 
     def _forward(self, x):
@@ -73,28 +75,54 @@ class FeedForwardNeuralNetwork:
         self.a[-1] = self.soft_max(self.z[-1])
         return
 
+    def predict(self, x, logits=False):
+        _x = np.insert(x, 0, 1)
+        tmp_z = self.z.copy()
+        tmp_a = self.a.copy()
+        for j in range(self.layout[1]):
+            tmp_z[0][j] = np.sum(self.weights[0] * _x)
+            tmp_a[0][j] = self._leaky_relu(tmp_z[0][j])
+        for i in range(1, len(tmp_z)-1, 1):
+            for j in range(len(tmp_z[i])):
+                tmp_z[i][j] = np.sum(self.weights[i][j] * np.insert(tmp_z[i-1], 0, 1))
+            tmp_a[i] = self._leaky_relu(tmp_z[i])
+        for j in range(len(tmp_z[-1])):
+            tmp_z[-1][j] = np.sum(self.weights[-1][j] * np.insert(tmp_z[-2], 0, 1))
+        tmp_a[-1] = self.soft_max(tmp_z[-1])
+        if logits:
+            return (np.array(tmp_a[-1]).argmax(), tmp_a)
+        return np.array(tmp_a[-1]).argmax()
+
     def soft_max(self, x):
         exp_x = np.exp(x - np.max(x))
         return exp_x / np.sum(exp_x)
 
     def cross_entropy(self, y, p):
-        return -np.sum(y * np.log(p))
+        p = np.clip(p, 1e-12, 1.0 - 1e-12)
+        return -np.sum(y * np.where(p > 0, np.log(p), 0))
 
     def _err(self, y):
-        self.err[-1] = self.a[-1] - y
+        self._errors[-1] = self.a[-1] - y
         for i in range(len(self.weights)-2, -1, -1):
             _deriv = np.array(self.z[i])
             _deriv[_deriv > 0] = 1
             _deriv[_deriv <= 0] = 0
-            self.err[i] = np.matmul(np.array(self.weights[i+1])[:, 1:].T, self.err[i+1]) * _deriv
+            self._errors[i] = np.matmul(np.array(self.weights[i+1])[:, 1:].T, self._errors[i+1]) * _deriv
         return
 
-    def _grads(self, inp):
-        self.grdnt[0] = np.outer(self.err[0], np.array(inp).T)
+    def _clac_gradient(self, inp):
+        self.gradients[0] = np.outer(self._errors[0], np.array(inp).T)
         for i in range(1, len(self.weights), 1):
-            self.grdnt[i] = np.outer(self.err[i], np.array(self.a[i-1]).T)
+            self.gradients[i] = np.outer(self._errors[i], np.array(self.a[i-1]).T)
         return
 
+    def _update_weights(self):
+        for i, vi in enumerate(self.gradients):
+            self.weights[i] = np.array(self.weights[i])
+            self.weights[i][:, 0] = self.weights[i][:, 0] - self.LEARNING_RATE * self._errors[i]
+            for j, vj in enumerate(vi):
+                self.weights[i][j][1:] = self.weights[i][j][1:] - self.LEARNING_RATE * vj
+        return
 
     def _loss(self, Y):
         # the label data is expected as one hot encoded values and even for binary calssification the
@@ -103,9 +131,9 @@ class FeedForwardNeuralNetwork:
         return -(1/len(Y)) * np.sum(Y * np.log(self.a[-1]))
     
     def _onehot_encode(self, y):
-        tmp = [0 for i in range(self.layout[-1])]
+        tmp = [0 for _ in range(self.layout[-1])]
         tmp[y] = 1
         return tmp
     
     def _leaky_relu(self, inp):
-        return np.maximum(inp, (self.relu_const * np.array(inp)))
+        return np.maximum(inp, (self.RELU_CONST * np.array(inp)))
