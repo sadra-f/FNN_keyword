@@ -30,8 +30,8 @@ class FeedForwardNeuralNetwork:
             for j in range(self.layout[i]):
                 # +1 in range for the bias
                 tmp.append([f"L{i}-N{j}-W{w}" for w in range(self.layout[i-1] + 1)])
-                tmp_w.append(np.random.rand(self.layout[i-1] + 1))
-                #     weights = np.random.normal(loc=0.0, scale=std_dev, size=(n_inputs, n_outputs))
+                std_dev = np.sqrt(2.0 / self.layout[i-1] + 1)
+                tmp_w.append(np.random.normal(loc=0.0, scale=std_dev, size=self.layout[i-1]+1))
             self.structure.append(tmp)
             self._weight_template.append(tmp_w)
         # +1 in range for the bias
@@ -57,7 +57,6 @@ class FeedForwardNeuralNetwork:
             self._err(y)
             self._clac_gradient(x)
             self._update_weights()
-            pass # TODO: update weights
 
     def _forward(self, x):
         _x = np.insert(x, 0, 1)
@@ -114,7 +113,7 @@ class FeedForwardNeuralNetwork:
     def _clac_gradient(self, inp):
         self.gradients[0] = np.outer(self._errors[0], np.array(inp).T)
         for i in range(1, len(self.weights), 1):
-            self.gradients[i] = np.outer(self._errors[i], np.array(self.a[i-1]).T)
+            self.gradients[i] = np.outer(self._errors[i], np.array(self.a[i-1]))
         return
 
     def _update_weights(self):
@@ -123,6 +122,7 @@ class FeedForwardNeuralNetwork:
             self.weights[i][:, 0] = self.weights[i][:, 0] - self.LEARNING_RATE * self._errors[i]
             for j, vj in enumerate(vi):
                 self.weights[i][j][1:] = self.weights[i][j][1:] - self.LEARNING_RATE * vj
+                pass
         return
 
     def _loss(self, Y):
