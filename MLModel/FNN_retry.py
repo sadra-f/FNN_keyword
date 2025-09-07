@@ -36,7 +36,8 @@ class FeedForwardNeuralNetwork:
             self._weight_template.append(tmp_w)
         # +1 in range for the bias
         self.structure.append([[f"O{j}-W{w}" for w in range(self.layout[-2] + 1)] for j in range(self.layout[-1])])
-        self._weight_template.append([np.random.rand(self.layout[-2] + 1) for j in range(self.layout[-1])])
+        std_dev = np.sqrt(2.0 / (self.layout[-1] + 1))
+        self._weight_template.append(np.random.normal(loc=0.0, scale=std_dev, size=self.layout[-1]+1))
 
     def train(self, X, Y):
         self.weights = copy.deepcopy(self._weight_template)
@@ -77,7 +78,7 @@ class FeedForwardNeuralNetwork:
         return
 
     def predict(self, x, logits=False):
-        _x = self._normalize(np.insert(x, 0, 1))
+        _x = np.insert(self._normalize(x), 0, 1)
         tmp_z = copy.deepcopy(self.z)
         tmp_a = copy.deepcopy(self.a)
         for j in range(self.layout[1]):
