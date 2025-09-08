@@ -80,7 +80,7 @@ class FeedForwardNeuralNetwork:
                 self._forward(x)
 
                 self.loss_hist[epc].append(self.cross_entropy(y, self.a[-1]))
-                
+
                 # backpropagation
                 self._err(y)
                 self._clac_gradient(x)
@@ -127,6 +127,12 @@ class FeedForwardNeuralNetwork:
             return (np.array(tmp_a[-1]).argmax(), tmp_a)
         
         return np.array(tmp_a[-1]).argmax()
+
+    def predict_all(self, X, logits=False):
+        res = []
+        for v in X:
+            res.append(self.predict(X, logits))
+        return res
 
     def soft_max(self, x):
         exp_x = np.exp(x - np.max(x))
