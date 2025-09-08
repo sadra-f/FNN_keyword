@@ -2,7 +2,6 @@
 
 In order to gain a better understanding of Neural networks and Backpropagation, I attempted to implement an FNN from scratch. 
 
-#### Description
 I implemented this Feedforward Nerual Network from scratch, so minimal libraries are used. numpy for the FNN and pandas for some dataset manipulation.
 I previously Generated a structured numerical keyword prediction dataset which was used in [this](https://github.com/sadra-f/LRKeywordExtraction) project (view for more details on dataset) where I Implemented Logistic Regression from scratch and used the mentioned dataset as an experimental keyword extraction method.
 
