@@ -37,9 +37,9 @@ class FeedForwardNeuralNetwork:
         # +1 in range for the bias
         self.structure.append([[f"O{j}-W{w}" for w in range(self.layout[-2] + 1)] for j in range(self.layout[-1])])
         std_dev = np.sqrt(2.0 / (self.layout[-1] + 1))
-        self._weight_template.append(np.random.normal(loc=0.0, scale=std_dev, size=self.layout[-1]+1))
+        self._weight_template.append(np.random.normal(loc=0.0, scale=std_dev, size=(self.layout[-1], self.layout[-2]+1)))
 
-    def train(self, X, Y):
+    def train(self, X, Y, epoch=1):
         self.weights = copy.deepcopy(self._weight_template)
         self.z = []
         self.a = []
@@ -51,14 +51,16 @@ class FeedForwardNeuralNetwork:
             self.a.append([None for _ in range(iv)])
             self._errors.append([None for _ in range(iv)])
             self.gradients = copy.deepcopy(self._weight_template)
-        for i, _x in enumerate(X):
-            y = self._onehot_encode(Y[i])
-            x = self._normalize(_x)
-            self._forward(x)
-            self.loss_hist.append(self.cross_entropy(y, self.a[-1]))
-            self._err(y)
-            self._clac_gradient(x)
-            self._update_weights()
+        for epc in range(epoch):
+            self.loss_hist.append([])
+            for i, _x in enumerate(X):
+                y = self._onehot_encode(Y[i])
+                x = self._normalize(_x)
+                self._forward(x)
+                self.loss_hist[epc].append(self.cross_entropy(y, self.a[-1]))
+                self._err(y)
+                self._clac_gradient(x)
+                self._update_weights()
 
     def _forward(self, x):
         _x = np.insert(x, 0, 1)
