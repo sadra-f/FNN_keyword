@@ -1,4 +1,4 @@
-from MLModel.FNN_retry import FeedForwardNeuralNetwork as FNN
+from MLModel.FNN import FeedForwardNeuralNetwork as FNN
 from IO.Read import read_csv_dataset
 from Evaluation.classification_eval import binary_classification_metrics
 
